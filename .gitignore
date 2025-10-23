@@ -1,0 +1,27 @@
+# Maven/Java
+target/
+*.class
+*.log
+*.iml
+*.ipr
+*.iws
+
+# VS Code
+.vscode/
+.history/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env/Secrets
+*.env
+.env.*
+
+# Build outputs / temp
+/out/
+*.tmp
+*.swp
+
+# Cygwin/Windows cruft
+Desktop.ini
