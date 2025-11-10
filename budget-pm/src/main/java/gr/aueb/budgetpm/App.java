@@ -39,11 +39,18 @@ public class App {
             }
         }
     }
+        /**
+     * Υπολογίζει το ισοζύγιο (έσοδα - έξοδα).
+     * Προς το παρόν απλή αφαίρεση· αργότερα μπορεί να γίνει πιο έξυπνη.
+     */
+    public static long computeBalance(long revenues, long expenses) {
+        return revenues - expenses;
+    }
 
     private static void showSummary() {
         long revenues = 35_000_000_000L; // προσωρινά δεδομένα
         long expenses = 40_000_000_000L; // προσωρινά δεδομένα
-        long balance  = revenues - expenses;
+        long balance  = computeBalance(revenues, expenses);
 
         System.out.println("— Σύνοψη προϋπολογισμού (προσωρινά δεδομένα) —");
         System.out.printf("  Έσοδα : %,d €%n", revenues);
