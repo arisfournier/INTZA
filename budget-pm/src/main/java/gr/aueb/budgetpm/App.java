@@ -18,6 +18,10 @@ public class App {
     public static void main(String[] args) throws Exception {
         System.out.println(BANNER);
 
+        // ΔΗΜΙΟΥΡΓΙΑ ΚΑΙ ΦΟΡΤΩΣΗ BUDGET
+        Budget budget = new Budget();
+        budget.loadFromApi();
+
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
         while (true) {
@@ -29,7 +33,7 @@ public class App {
 
             switch (cmd) {
                 case "help" -> System.out.println(BANNER);
-                case "show summary" -> showSummary();
+                case "show summary" -> showSummary(budget);
                 case "exit", "quit" -> {
                     System.out.println("Αντίο!");
                     return;
@@ -47,10 +51,13 @@ public class App {
         return revenues - expenses;
     }
 
-    private static void showSummary() {
-        long revenues = 35_000_000_000L; // προσωρινά δεδομένα
-        long expenses = 40_000_000_000L; // προσωρινά δεδομένα
+    private static void showSummary(Budget budget) {
+        long revenues = budget.getTotalRevenue();      //Το νεο
+        long expenses = budget.getTotalExpenses();
         long balance  = computeBalance(revenues, expenses);
+        /*long revenues = 35_000_000_000L; // προσωρινά δεδομένα    Τα προιγουμενα προσωρινα
+        long expenses = 40_000_000_000L; // προσωρινά δεδομένα
+        long balance  = computeBalance(revenues, expenses);*/
 
         System.out.println("— Σύνοψη προϋπολογισμού (προσωρινά δεδομένα) —");
         System.out.printf("  Έσοδα : %,d €%n", revenues);
@@ -64,4 +71,5 @@ public class App {
             System.out.println("  (Ισοσκελισμένο)");
         }
     }
+    
 }
