@@ -7,20 +7,28 @@ public class App {
 
     private static final String BANNER = """
             =========================================
-               Πρωθυπουργός για μια μέρα (CLI v0.1)
+               Πρωθυπουργός για μια μέρα (CLI v0.2)
             =========================================
             Εντολές:
               help            - βοήθεια
-              show summary    - εμφάνιση συνοπτικών στοιχείων (dummy)
+              show summary    - εμφάνιση συνοπτικών στοιχείων (από API)
               exit            - έξοδος
             """;
 
-    public static void main(String[] args) throws Exception {
-        System.out.println(BANNER);
+    // Κρατάει τα σύνολα που φέρνουμε από το API (κλάση Budget της ομάδας σας)
+    private static Budget currentBudget = new Budget();
 
-        // ΔΗΜΙΟΥΡΓΙΑ ΚΑΙ ΦΟΡΤΩΣΗ BUDGET
-        Budget budget = new Budget();
-        budget.loadFromApi();
+    public static void main(String[] args) throws Exception {
+        System.out.println("Φόρτωση δεδομένων προϋπολογισμού από API για GR...");
+        try {
+            currentBudget.loadFromApi();   // Μέθοδος που ήδη υπάρχει στην Budget.java
+            System.out.println("Ολοκληρώθηκε η φόρτωση.\n");
+        } catch (Exception e) {
+            System.out.println("Αποτυχία φόρτωσης δεδομένων από API: " + e.getMessage());
+            System.out.println("Θα χρησιμοποιηθούν μηδενικές τιμές.\n");
+        }
+
+        System.out.println(BANNER);
 
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
@@ -33,33 +41,30 @@ public class App {
 
             switch (cmd) {
                 case "help" -> System.out.println(BANNER);
-                case "show summary" -> showSummary(budget);
+                case "show summary" -> showSummary();
                 case "exit", "quit" -> {
                     System.out.println("Αντίο!");
                     return;
                 }
-                case "" -> {} // αγνόησε κενές γραμμές
+                case "" -> { /* αγνόησε κενές γραμμές */ }
                 default -> System.out.println("Άγνωστη εντολή. Γράψε 'help'.");
             }
         }
     }
-        /**
-     * Υπολογίζει το ισοζύγιο (έσοδα - έξοδα).
-     * Προς το παρόν απλή αφαίρεση· αργότερα μπορεί να γίνει πιο έξυπνη.
+
+    /** Υπολογίζει το ισοζύγιο (έσοδα - έξοδα).
+     *  Την κρατάμε ξεχωριστή επειδή ήδη έχουμε tests για αυτή.
      */
     public static long computeBalance(long revenues, long expenses) {
         return revenues - expenses;
     }
 
-    private static void showSummary(Budget budget) {
-        long revenues = budget.getTotalRevenue();      //Το νεο
-        long expenses = budget.getTotalExpenses();
+    private static void showSummary() {
+        long revenues = currentBudget.getTotalRevenue();
+        long expenses = currentBudget.getTotalExpenses();
         long balance  = computeBalance(revenues, expenses);
-        /*long revenues = 35_000_000_000L; // προσωρινά δεδομένα    Τα προιγουμενα προσωρινα
-        long expenses = 40_000_000_000L; // προσωρινά δεδομένα
-        long balance  = computeBalance(revenues, expenses);*/
 
-        System.out.println("— Σύνοψη προϋπολογισμού (προσωρινά δεδομένα) —");
+        System.out.println("— Σύνοψη προϋπολογισμού (WorldBank API, GR) —");
         System.out.printf("  Έσοδα : %,d €%n", revenues);
         System.out.printf("  Έξοδα : %,d €%n", expenses);
         System.out.printf("  Ισοζύγιο: %,d €%n", balance);
@@ -71,5 +76,4 @@ public class App {
             System.out.println("  (Ισοσκελισμένο)");
         }
     }
-    
 }
