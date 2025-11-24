@@ -6,14 +6,15 @@ import java.io.InputStreamReader;
 public class App {
 
     private static final String BANNER = """
-            =========================================
-               Πρωθυπουργός για μια μέρα (CLI v0.2)
-            =========================================
-            Εντολές:
-              help            - βοήθεια
-              show summary    - εμφάνιση συνοπτικών στοιχείων (από API)
-              exit            - έξοδος
-            """;
+        =========================================
+           Πρωθυπουργός για μια μέρα (CLI v0.2)
+        =========================================
+        Εντολές:
+          help             - βοήθεια
+          show summary     - εμφάνιση συνοπτικών στοιχείων (από API)
+          show categories  - εμφάνιση κατηγοριών
+          exit             - έξοδος
+        """;
 
     // Κρατάει τα σύνολα που φέρνουμε από το API (κλάση Budget της ομάδας σας)
     private static Budget currentBudget = new Budget();
@@ -42,6 +43,7 @@ public class App {
             switch (cmd) {
                 case "help" -> System.out.println(BANNER);
                 case "show summary" -> showSummary();
+                case "show categories" -> showCategories();
                 case "exit", "quit" -> {
                     System.out.println("Αντίο!");
                     return;
@@ -74,6 +76,20 @@ public class App {
             System.out.println("  (Πλεόνασμα)");
         } else {
             System.out.println("  (Ισοσκελισμένο)");
+        }
+    }
+
+    private static void showCategories() {
+        System.out.println("Κατηγορίες προϋπολογισμού:");
+
+        var categories = currentBudget.getCategories();
+        if (categories == null || categories.isEmpty()) {
+            System.out.println("  (Δεν υπάρχουν διαθέσιμα δεδομένα κατηγοριών)");
+            return;
+        }
+
+        for (BudgetCategory c : categories) {
+            System.out.printf("  - %s : %,d €%n", c.getName(), c.getAmount());
         }
     }
 }
