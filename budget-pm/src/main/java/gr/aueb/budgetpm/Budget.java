@@ -10,33 +10,55 @@ import java.util.ArrayList;
 
 /**
  * Προσωρινή κλάση Budget με φόρτωση δεδομένων από το WorldBank API.
- * Κρατάει συνολικά έσοδα / έξοδα και επιτρέπει ομαδοποίηση σε κατηγορίες.
- *
- * Σκοπός μας εδώ είναι:
- * - να ΜΗΝ πετάει exceptions όταν το API έχει πρόβλημα
- * - να έχουμε πάντα μη αρνητικές τιμές
- * - να μπορούμε να πάρουμε categories μέσω getCategories()
+ * Υποστηρίζει:
+ * - χώρα (countryCode)
+ * - έτος (year) – προς το παρόν δεν το χρησιμοποιούμε στο API query,
+ *   αλλά το κρατάμε για μελλοντική χρήση.
  */
 public class Budget {
+
+    private final String countryCode;
+    private final int year;
 
     private long totalRevenue = 0L;
     private long totalExpenses = 0L;
 
     // Αποθηκεύει τις "ακατέργαστες" τιμές που προέρχονται από το API
-    // π.χ. apiValues.put("GC.XPN.TOTL.GD.ZS", 123456L);
     private final Map<String, Long> apiValues = new HashMap<>();
 
     // Απλή αντιστοίχιση API κωδικών σε κατηγορίες. Προς το παρόν ενδεικτική.
     private static final Map<String, String> CATEGORY_MAP = Map.of(
-            "GC.XPN.TOTL.GD.ZS", "TAXES"   // δικό μας προσωρινό label
+            "GC.XPN.TOTL.GD.ZS", "TAXES"
     );
 
+    /**
+     * Default budget: Ελλάδα, χωρίς συγκεκριμένο έτος (0).
+     * Το χρησιμοποιεί η App σήμερα.
+     */
     public Budget() {
+        this(0, "GR");
     }
 
     /**
-     * Φορτώνει δεδομένα από το WorldBank API για την Ελλάδα (GR).
-     * Σε περίπτωση αποτυχίας, τα σύνολα παραμένουν 0 και δεν πετάγεται exception.
+     * Budget για συγκεκριμένη χώρα & έτος.
+     */
+    public Budget(int year, String countryCode) {
+        this.year = year;
+        this.countryCode = countryCode;
+    }
+
+    public String getCountryCode() {
+        return countryCode;
+    }
+
+    public int getYear() {
+        return year;
+    }
+
+    /**
+     * Φορτώνει δεδομένα από το WorldBank API για τη χώρα.
+     * (Προς το παρόν αγνοεί το year, θα το χρησιμοποιήσουμε αργότερα
+     * όταν φτιάξουμε πιο εξειδικευμένο API query.)
      */
     public void loadFromApi() {
         totalRevenue = 0L;
@@ -44,19 +66,17 @@ public class Budget {
         apiValues.clear();
 
         try {
-            JSONArray data = BudgetApiReader.fetchBudgetData("GR");
+            JSONArray data = BudgetApiReader.fetchBudgetData(countryCode);
             if (data == null || data.length() < 2) {
-                // Δεν έχουμε επαρκή δεδομένα
                 return;
             }
 
-            // Στα responses της WorldBank, το index 1 είναι array με τις παρατηρήσεις.
             JSONArray observations = data.getJSONArray(1);
             if (observations.length() == 0) {
                 return;
             }
 
-            // Θα πάρουμε την πιο πρόσφατη μη-κενή τιμή "value"
+            // Παίρνουμε την πρώτη μη-κενή τιμή "value"
             Long latestValue = null;
             for (int i = 0; i < observations.length(); i++) {
                 JSONObject obj = observations.getJSONObject(i);
@@ -68,21 +88,17 @@ public class Budget {
             }
 
             if (latestValue == null) {
-                // Όλες οι τιμές ήταν null
                 return;
             }
 
-            // Για την ώρα θεωρούμε ότι αυτό είναι "σύνολο εξόδων"
+            // Προς το παρόν θεωρούμε ότι η τιμή αυτή είναι "έξοδα"
             totalExpenses = latestValue;
-            // Μπορούμε να θέσουμε τα έσοδα ίσα, ή 0. Κρατάμε 0 για ασφάλεια.
             totalRevenue = 0L;
 
-            // Γεμίζουμε τον χάρτη raw τιμών για grouping
             apiValues.put("GC.XPN.TOTL.GD.ZS", totalExpenses);
 
         } catch (Exception e) {
             System.out.println("API parsing error in Budget.loadFromApi: " + e.getMessage());
-            // Σε οποιοδήποτε σφάλμα, κρατάμε μηδενικά και κενό map
             totalRevenue = 0L;
             totalExpenses = 0L;
             apiValues.clear();
@@ -95,6 +111,13 @@ public class Budget {
 
     public long getTotalExpenses() {
         return totalExpenses;
+    }
+
+    //Θέτει χειροκίνητα τα σύνολα εσόδων/εξόδων.
+    // Χρησιμοποιείται κυρίως από το BudgetStorage.loadBudget().
+    public void setTotals(long revenues, long expenses) {
+        this.totalRevenue = revenues;
+        this.totalExpenses = expenses;
     }
 
     /**
