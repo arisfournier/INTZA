@@ -26,9 +26,15 @@ public class Budget {
     // Αποθηκεύει τις "ακατέργαστες" τιμές που προέρχονται από το API
     private final Map<String, Long> apiValues = new HashMap<>();
 
-    // Απλή αντιστοίχιση API κωδικών σε κατηγορίες. Προς το παρόν ενδεικτική.
+    // - τον δείκτη GC.XPN.TOTL.GD.ZS ως "συνολικά έξοδα"
+    // - εσωτερικούς κωδικούς HEALTH_TOTAL, HOSPITALS, PHARMA, PREVENTION, STAFF
     private static final Map<String, String> CATEGORY_MAP = Map.of(
-            "GC.XPN.TOTL.GD.ZS", "TAXES"
+            "GC.XPN.TOTL.GD.ZS", "TOTAL_EXPENSES",
+            "HEALTH_TOTAL",      "HEALTH",
+            "HOSPITALS",         "HOSPITALS",
+            "PHARMA",            "PHARMA",
+            "PREVENTION",        "PREVENTION",
+            "STAFF",             "STAFF"
     );
 
     /**
@@ -96,6 +102,21 @@ public class Budget {
             totalRevenue = 0L;
 
             apiValues.put("GC.XPN.TOTL.GD.ZS", totalExpenses);
+
+            // Θεωρούμε ότι ΟΛΑ τα έξοδα ανήκουν στο "HEALTH_TOTAL"
+            long healthTotal = totalExpenses;
+
+            // Σπάμε το healthTotal σε υπο-κατηγορίες:
+            long hospitals  = healthTotal * 50 / 100;  // 50% νοσοκομεία
+            long pharma     = healthTotal * 20 / 100;  // 20% φάρμακα
+            long prevention = healthTotal * 15 / 100;  // 15% πρόληψη
+            long staff      = healthTotal - hospitals - pharma - prevention; // υπόλοιπο σε προσωπικό
+
+            apiValues.put("HEALTH_TOTAL", healthTotal);
+            apiValues.put("HOSPITALS",    hospitals);
+            apiValues.put("PHARMA",       pharma);
+            apiValues.put("PREVENTION",   prevention);
+            apiValues.put("STAFF",        staff);
 
         } catch (Exception e) {
             System.out.println("API parsing error in Budget.loadFromApi: " + e.getMessage());
