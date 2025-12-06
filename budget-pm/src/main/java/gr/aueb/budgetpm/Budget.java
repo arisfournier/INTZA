@@ -16,6 +16,8 @@ import java.util.ArrayList;
  *   αλλά το κρατάμε για μελλοντική χρήση.
  */
 public class Budget {
+    // Αλλαγές που έκανε ο χρήστης (overrides στις API τιμές)
+    private Map<String, Long> userChanges = new HashMap<>();
 
     private final String countryCode;
     private final int year;
@@ -134,6 +136,15 @@ public class Budget {
         return totalExpenses;
     }
 
+    /**
+ * Επιστρέφει τις "ακατέργαστες" τιμές από το API
+ * (πριν από αλλαγές χρήστη).
+ */
+    public Map<String, Long> getApiValues() {
+        return apiValues;
+    }
+
+
     //Θέτει χειροκίνητα τα σύνολα εσόδων/εξόδων.
     // Χρησιμοποιείται κυρίως από το BudgetStorage.loadBudget().
     public void setTotals(long revenues, long expenses) {
@@ -147,10 +158,27 @@ public class Budget {
     public List<BudgetCategory> getCategories() {
         Map<String, BudgetCategory> categories = new HashMap<>();
 
-        for (Map.Entry<String, Long> entry : apiValues.entrySet()) {
-            String apiCode = entry.getKey();
-            long amount = entry.getValue() != null ? entry.getValue() : 0L;
+        // 1) Περνάμε όλα τα κλειδιά του API, αλλά χρησιμοποιούμε ΤΕΛΙΚΗ τιμή
+        for (String apiCode : apiValues.keySet()) {
+            long amount = getFinalValue(apiCode); // αν υπάρχει userChange, το παίρνει αυτό
+            String categoryCode = CATEGORY_MAP.getOrDefault(apiCode, "OTHER");
 
+            BudgetCategory cat = categories.get(categoryCode);
+            if (cat == null) {
+                cat = new BudgetCategory(categoryCode, categoryCode, amount);
+            } else {
+                cat.addAmount(amount);
+            }
+            categories.put(categoryCode, cat);
+        }
+
+        // 2) Περνάμε κλειδιά που υπάρχουν ΜΟΝΟ στα userChanges (όχι στο API)
+        for (String apiCode : userChanges.keySet()) {
+            if (apiValues.containsKey(apiCode)) {
+                continue; // τα έχουμε ήδη χειριστεί παραπάνω
+            }
+
+            long amount = getFinalValue(apiCode);
             String categoryCode = CATEGORY_MAP.getOrDefault(apiCode, "OTHER");
 
             BudgetCategory cat = categories.get(categoryCode);
@@ -164,4 +192,44 @@ public class Budget {
 
         return new ArrayList<>(categories.values());
     }
+
+    /**
+ * Επιστρέφει την τελική τιμή (API + userChanges) βάση της ΟΝΟΜΑΣΙΑΣ κατηγορίας,
+ * δηλαδή PHARMA, HOSPITALS κλπ.
+ */
+    public long getFinalValueFromCategoryName(String categoryName) {
+        long sum = 0;
+
+        for (BudgetCategory c : getCategories()) {
+            if (c.getName().equals(categoryName)) {
+                sum += c.getAmount();
+            }
+        }
+
+        return sum;
+    }
+
+
+
+    /**
+ * Ορίζει μια αλλαγή από τον χρήστη για μια κατηγορία.
+ */
+    public void setUserValue(String category, long value) {
+        userChanges.put(category, value);
+    }
+
+    /**
+ * Επιστρέφει όλες τις αλλαγές που έκανε ο χρήστης.
+ */
+    public Map<String, Long> getUserChanges() {
+        return userChanges;
+    }
+
+    public long getFinalValue(String category) {
+        if (userChanges.containsKey(category)) {
+            return userChanges.get(category);   // override
+        }
+        return apiValues.getOrDefault(category, 0L);
+    }
+
 }

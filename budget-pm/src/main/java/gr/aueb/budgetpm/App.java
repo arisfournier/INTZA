@@ -19,8 +19,14 @@ public class App {
             Εντολές:
               help               - βοήθεια
               show summary       - εμφάνιση συνοπτικών στοιχείων
+              show changes        - εμφάνιση αλλαγών χρήστη για το τρέχον έτος
               show categories    - εμφάνιση κατηγοριών
+              increase all <X>    - αύξηση όλων των κατηγοριών κατά X%%
+              increase <CAT> <X>  - αύξηση συγκεκριμένης κατηγορίας κατά X%%
+              reduce all <X>      - μείωση όλων των κατηγοριών κατά X%%
+              reduce <CAT> <X>    - μείωση συγκεκριμένης κατηγορίας κατά X%%
               set year <έτος>    - επιλογή έτους (π.χ. set year 2020)
+              compare <year1> <year2>  - σύγκριση δύο ετών
               list years         - εμφάνιση φορτωμένων ετών
               save year <έτος>   - αποθήκευση προϋπολογισμού έτους σε αρχείο
               load year <έτος>   - φόρτωση προϋπολογισμού έτους από αρχείο
@@ -43,8 +49,18 @@ public class App {
                 System.out.println(BANNER);
             } else if (input.equals("show summary")) {
                 showSummary();
+            } else if (input.equals("show changes")) {
+                showChanges();
             } else if (input.equals("show categories")) {
                 showCategories();
+            } else if (input.startsWith("increase all")) {
+                handleIncreaseAll(input);
+            } else if (input.startsWith("increase ")) {
+                handleIncreaseCategory(input);
+            } else if (input.startsWith("reduce all")) {
+                handleReduceAll(input);
+            } else if (input.startsWith("reduce ")) {
+                handleReduceCategory(input);
             } else if (input.startsWith("set year")) {
                 handleSetYear(input);
             } else if (input.equals("list years")) {
@@ -53,13 +69,20 @@ public class App {
                 handleSaveYear(input);
             } else if (input.startsWith("load year")) {
                 handleLoadYear(input);
+            } else if (input.startsWith("compare ")) {
+                handleCompare(input);
             } else if (input.startsWith("compare countries")) {
                 handleCompareCountries(input);
+            } else if (input.equals("save all")) {
+                handleSaveAll();
+            } else if (input.equals("load all")) {
+                handleLoadAll();
+            } else if (input.startsWith("set value")) {
+                handleSetValue(input);
             } else if (input.equals("exit") || input.equals("quit")) {
                 System.out.println("Αντίο!");
                 return;
             } else if (input.isEmpty()) {
-                // αγνόησε κενές γραμμές
             } else {
                 System.out.println("Άγνωστη εντολή. Γράψε 'help'.");
             }
@@ -200,10 +223,334 @@ public class App {
         }
     }
 
+    private static void handleSaveAll() {
+        try {
+            Path dir = Path.of("data");
+            if (!Files.exists(dir)) Files.createDirectories(dir);
+
+            Path file = dir.resolve("all-budgets.json");
+
+            yearManager.saveAll(file);
+
+            System.out.println("Αποθηκεύτηκαν όλα τα budgets στο " + file);
+        } catch (Exception e) {
+            System.out.println("Σφάλμα στο save all: " + e.getMessage());
+        }
+    }
+
+    private static void handleLoadAll() {
+        try {
+            Path file = Path.of("data/all-budgets.json");
+
+            if (!Files.exists(file)) {
+                System.out.println("Δεν υπάρχει αποθηκευμένο αρχείο all-budgets.json");
+                return;
+            }
+
+            yearManager.loadAll(file);
+
+            System.out.println("Φορτώθηκαν όλα τα budgets από " + file);
+
+        } catch (Exception e) {
+            System.out.println("Σφάλμα στο load all: " + e.getMessage());
+        }
+    }
+
+    /**
+ * Εντολή: set value <CATEGORY> <AMOUNT>
+ * Αλλάζει την τιμή μιας κατηγορίας για το τρέχον έτος.
+ */
+    private static void handleSetValue(String input) {
+        try {
+            String[] parts = input.split("\\s+");
+
+            if (parts.length != 4) {
+                System.out.println("Χρήση: set value <CATEGORY> <AMOUNT>");
+                return;
+            }
+
+            if (currentYear < 0) {
+                System.out.println("Πρέπει να ορίσετε έτος με την εντολή: set year <YEAR>");
+                return;
+            }
+
+            String category = parts[2].toUpperCase();
+            long amount = Long.parseLong(parts[3]);
+
+            // Έλεγχος περιορισμών
+            if (amount < 0) {
+                System.out.println("Το ποσό δεν μπορεί να είναι αρνητικό!");
+                return;
+            }
+
+            Budget budget = yearManager.getOrLoad(currentYear);
+
+            // Έλεγχος αν υπάρχει η κατηγορία
+            if (!budget.getApiValues().containsKey(category) &&
+                !budget.getUserChanges().containsKey(category)) {
+                System.out.println("Η κατηγορία '" + category + "' δεν υπάρχει στο budget.");
+                return;
+            }
+
+            // Καταχώρηση αλλαγής
+            budget.setUserValue(category, amount);
+
+            System.out.println("Η κατηγορία " + category + " ενημερώθηκε σε: " + amount + " €");
+
+        } catch (NumberFormatException e) {
+            System.out.println("Μη έγκυρο ποσό. Πρέπει να δώσετε αριθμό.");
+        } catch (Exception e) {
+            System.out.println("Σφάλμα στο set value: " + e.getMessage());
+        }
+    }
+    
+    /**
+ * Εντολή: compare <YEAR1> <YEAR2>
+ * Συγκρίνει τις τελικές τιμές ανά κατηγορία μεταξύ δύο ετών.
+ */
+    private static void handleCompare(String input) {
+        try {
+            String[] parts = input.split("\\s+");
+            if (parts.length != 3) {
+                System.out.println("Χρήση: compare <YEAR1> <YEAR2>");
+                return;
+            }
+
+            int y1 = Integer.parseInt(parts[1]);
+            int y2 = Integer.parseInt(parts[2]);
+
+            Budget b1 = yearManager.getOrLoad(y1);
+            Budget b2 = yearManager.getOrLoad(y2);
+
+            System.out.printf("\nΣύγκριση προϋπολογισμών (%d → %d)\n\n", y1, y2);
+            System.out.printf("%-15s %15s %15s %15s\n", 
+                "Κατηγορία", y1, y2, "Διαφορά");
+            System.out.println("--------------------------------------------------------------");
+
+            // Βρίσκουμε ΟΛΕΣ τις κατηγορίες που υπάρχουν σε κάποιο από τα δύο έτη
+            var categories = new java.util.TreeSet<String>();
+            for (var cat : b1.getCategories()) categories.add(cat.getName());
+            for (var cat : b2.getCategories()) categories.add(cat.getName());
+
+            // Για κάθε κατηγορία, παίρνουμε τις ποσότητες
+            for (String category : categories) {
+                long v1 = b1.getFinalValueFromCategoryName(category);
+                long v2 = b2.getFinalValueFromCategoryName(category);
+                long diff = v2 - v1;
+
+                System.out.printf("%-15s %,15d %,15d %,15d\n",
+                    category, v1, v2, diff);
+            }
+
+            System.out.println();
+
+        } catch (Exception e) {
+            System.out.println("Σφάλμα στη σύγκριση: " + e.getMessage());
+        }
+    }
+
+    private static void handleIncreaseAll(String input) {
+        try {
+            String[] parts = input.split("\\s+");
+            if (parts.length != 3) {
+                System.out.println("Χρήση: increase all <percent>");
+                return;
+            }
+
+            if (currentYear < 0) {
+                System.out.println("Πρώτα ορίστε έτος με: set year <YEAR>");
+                return;
+            }
+
+            double percent = Double.parseDouble(parts[2]);
+            Budget b = yearManager.getOrLoad(currentYear);
+
+            var apiValues = b.getApiValues();
+            var changes = b.getUserChanges();
+
+            // Εφαρμόζουμε σε όλα τα κλειδιά του API
+            for (String key : apiValues.keySet()) {
+                long current = b.getFinalValue(key);
+                long newValue = Math.round(current * (1 + percent / 100.0));
+                if (newValue < 0) newValue = 0;
+                b.setUserValue(key, newValue);
+            }
+
+            // Και σε κλειδιά που υπάρχουν μόνο στα userChanges
+            for (String key : changes.keySet()) {
+                if (apiValues.containsKey(key)) continue;
+                long current = b.getFinalValue(key);
+                long newValue = Math.round(current * (1 + percent / 100.0));
+                if (newValue < 0) newValue = 0;
+                b.setUserValue(key, newValue);
+            }
+
+            System.out.printf("Αυξήθηκαν όλες οι κατηγορίες κατά %.2f%%%n", percent);
+
+        } catch (NumberFormatException e) {
+            System.out.println("Μη έγκυρο ποσοστό. Χρήση: increase all <percent>");
+        } catch (Exception e) {
+            System.out.println("Σφάλμα στο increase all: " + e.getMessage());
+        }
+    }
+
+    private static void handleIncreaseCategory(String input) {
+        try {
+            String[] parts = input.split("\\s+");
+            // increase <CAT> <percent>
+            if (parts.length != 3) {
+                System.out.println("Χρήση: increase <CATEGORY> <percent>");
+                return;
+            }
+
+            if ("all".equalsIgnoreCase(parts[1])) {
+                // Αυτό το case το πιάνει ήδη η handleIncreaseAll
+                handleIncreaseAll(input);
+                return;
+            }
+
+            if (currentYear < 0) {
+                System.out.println("Πρώτα ορίστε έτος με: set year <YEAR>");
+                return;
+            }
+
+            String category = parts[1].toUpperCase();
+            double percent = Double.parseDouble(parts[2]);
+
+            Budget b = yearManager.getOrLoad(currentYear);
+
+            // Έλεγχος αν υπάρχει η κατηγορία ως "κλειδί" (όπως στο set value)
+            if (!b.getApiValues().containsKey(category) &&
+                !b.getUserChanges().containsKey(category)) {
+                System.out.println("Η κατηγορία '" + category + "' δεν υπάρχει στο budget.");
+                System.out.println("Δες 'show categories' και χρησιμοποίησε τα ονόματα (π.χ. HOSPITALS, PHARMA, STAFF).");
+                return;
+            }
+
+            long current = b.getFinalValue(category);
+            long newValue = Math.round(current * (1 + percent / 100.0));
+            if (newValue < 0) newValue = 0;
+
+            b.setUserValue(category, newValue);
+
+            System.out.printf("Η κατηγορία %s αυξήθηκε κατά %.2f%% (%,d → %,d)%n",
+                    category, percent, current, newValue);
+
+        } catch (NumberFormatException e) {
+            System.out.println("Μη έγκυρο ποσοστό. Χρήση: increase <CATEGORY> <percent>");
+        } catch (Exception e) {
+            System.out.println("Σφάλμα στο increase <CATEGORY>: " + e.getMessage());
+        }
+    }
+
+    private static void handleReduceAll(String input) {
+        try {
+            String[] parts = input.split("\\s+");
+            if (parts.length != 3) {
+                System.out.println("Χρήση: reduce all <percent>");
+                return;
+            }
+ 
+            if (currentYear < 0) {
+                System.out.println("Πρώτα ορίστε έτος με: set year <YEAR>");
+                return;
+            }
+
+            double percent = Double.parseDouble(parts[2]);
+            if (percent < 0) {
+                System.out.println("Το ποσοστό πρέπει να είναι μη αρνητικό.");
+                return;
+            }
+
+            Budget b = yearManager.getOrLoad(currentYear);
+
+            var apiValues = b.getApiValues();
+            var changes = b.getUserChanges();
+
+            double factor = 1 - percent / 100.0;
+            if (factor < 0) factor = 0;
+
+            for (String key : apiValues.keySet()) {
+                long current = b.getFinalValue(key);
+                long newValue = Math.round(current * factor);
+                if (newValue < 0) newValue = 0;
+                b.setUserValue(key, newValue);
+            }
+
+            for (String key : changes.keySet()) {
+                if (apiValues.containsKey(key)) continue;
+                long current = b.getFinalValue(key);
+                long newValue = Math.round(current * factor);
+                if (newValue < 0) newValue = 0;
+                b.setUserValue(key, newValue);
+            }
+
+            System.out.printf("Μειώθηκαν όλες οι κατηγορίες κατά %.2f%%%n", percent);
+
+        } catch (NumberFormatException e) {
+            System.out.println("Μη έγκυρο ποσοστό. Χρήση: reduce all <percent>");
+        } catch (Exception e) {
+            System.out.println("Σφάλμα στο reduce all: " + e.getMessage());
+        }
+    }
+
+    private static void handleReduceCategory(String input) {
+        try {
+            String[] parts = input.split("\\s+");
+            // reduce <CAT> <percent>
+            if (parts.length != 3) {
+                System.out.println("Χρήση: reduce <CATEGORY> <percent>");
+                return;
+            }
+
+            if ("all".equalsIgnoreCase(parts[1])) {
+                handleReduceAll(input);
+               return;
+            }
+
+            if (currentYear < 0) {
+                System.out.println("Πρώτα ορίστε έτος με: set year <YEAR>");
+                return;
+            }
+
+            String category = parts[1].toUpperCase();
+            double percent = Double.parseDouble(parts[2]);
+            if (percent < 0) {
+                System.out.println("Το ποσοστό πρέπει να είναι μη αρνητικό.");
+                return;
+            }
+
+            Budget b = yearManager.getOrLoad(currentYear);
+
+            if (!b.getApiValues().containsKey(category) &&
+                !b.getUserChanges().containsKey(category)) {
+                System.out.println("Η κατηγορία '" + category + "' δεν υπάρχει στο budget.");
+                System.out.println("Δες 'show categories' και χρησιμοποίησε τα ονόματα (π.χ. HOSPITALS, PHARMA, STAFF).");
+                return;
+            }
+
+            long current = b.getFinalValue(category);
+            double factor = 1 - percent / 100.0;
+            if (factor < 0) factor = 0;
+
+            long newValue = Math.round(current * factor);
+            if (newValue < 0) newValue = 0;
+
+            b.setUserValue(category, newValue);
+
+            System.out.printf("Η κατηγορία %s μειώθηκε κατά %.2f%% (%,d → %,d)%n",
+                    category, percent, current, newValue);
+
+        } catch (NumberFormatException e) {
+            System.out.println("Μη έγκυρο ποσοστό. Χρήση: reduce <CATEGORY> <percent>");
+        } catch (Exception e) {
+            System.out.println("Σφάλμα στο reduce <CATEGORY>: " + e.getMessage());
+        }
+    }
 
 
 
-        // Υπολογισμός ισοζυγίου (έσοδα - έξοδα) σε long
+    // Υπολογισμός ισοζυγίου (έσοδα - έξοδα) σε long
     public static long computeBalance(long revenues, long expenses) {
         return revenues - expenses;
     }
@@ -232,6 +579,35 @@ public class App {
         } else {
             System.out.println("  (Ισοσκελισμένο)");
         }
+        System.out.println();
+    }
+
+    private static void showChanges() {
+        if (currentYear < 0) {
+            System.out.println("Πρώτα πρέπει να ορίσετε έτος με: set year <YEAR>");
+            return;
+        }
+
+        Budget b = yearManager.getOrLoad(currentYear);
+
+        var changes = b.getUserChanges();
+        if (changes == null || changes.isEmpty()) {
+            System.out.println("\nΔεν υπάρχουν αλλαγές χρήστη για το έτος " + currentYear + ".\n");
+            return;
+        }
+
+        System.out.println("\nΑλλαγές χρήστη για έτος " + currentYear + ":");
+
+        for (var entry : changes.entrySet()) {
+            String category = entry.getKey();
+            long newValue = entry.getValue();
+            long original = b.getApiValues().getOrDefault(category, 0L);
+            long diff = newValue - original;
+
+            System.out.printf(" - %-12s αρχικό=%,d  νέο=%,d  διαφορά=%,d%n",
+                    category, original, newValue, diff);
+        }
+
         System.out.println();
     }
 

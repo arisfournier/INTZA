@@ -1,0 +1,12 @@
+{
+  "country": "GR",
+  "budgets": [{
+    "year": 2020,
+    "userChanges": {
+      "STAFF": 8888888,
+      "HOSPITALS": 1234555
+    },
+    "totalExpenses": 47,
+    "totalRevenue": 0
+  }]
+}

@@ -4,6 +4,11 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.Collections;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Διαχειρίζεται Budget αντικείμενα ανά έτος για μια συγκεκριμένη χώρα.
@@ -48,4 +53,75 @@ public class BudgetYearManager {
     public void putBudget(int year, Budget budget) {
         budgetsByYear.put(year, budget);
     }
+
+    /**
+ * Αποθηκεύει ΟΛΑ τα budgets (όλα τα έτη) σε ένα JSON αρχείο,
+ * μαζί με τις αλλαγές χρήστη (userChanges).
+ */
+    public void saveAll(Path file) throws Exception {
+        JSONObject root = new JSONObject();
+        root.put("country", countryCode);
+
+        JSONArray arr = new JSONArray();
+
+        for (var entry : budgetsByYear.entrySet()) {
+            int year = entry.getKey();
+            Budget b = entry.getValue();
+
+            JSONObject obj = new JSONObject();
+            obj.put("year", year);
+            obj.put("totalRevenue", b.getTotalRevenue());
+            obj.put("totalExpenses", b.getTotalExpenses());
+
+            // Αποθήκευση αλλαγών χρήστη
+            JSONObject changes = new JSONObject();
+            for (var ch : b.getUserChanges().entrySet()) {
+                changes.put(ch.getKey(), ch.getValue());
+            }
+            obj.put("userChanges", changes);
+
+            arr.put(obj);
+        }
+
+        root.put("budgets", arr);
+
+        Files.writeString(file, root.toString(2), StandardCharsets.UTF_8);
+    }
+
+
+    /**
+ * Φορτώνει όλα τα budgets από ένα JSON αρχείο και τα περνάει στον manager,
+ * συμπεριλαμβανομένων των αλλαγών χρήστη (userChanges).
+ */
+    public void loadAll(Path file) throws Exception {
+        String json = Files.readString(file, StandardCharsets.UTF_8);
+        JSONObject root = new JSONObject(json);
+
+        JSONArray arr = root.getJSONArray("budgets");
+
+        budgetsByYear.clear();
+
+        for (int i = 0; i < arr.length(); i++) {
+            JSONObject obj = arr.getJSONObject(i);
+
+            int year = obj.getInt("year");
+            long rev = obj.getLong("totalRevenue");
+            long exp = obj.getLong("totalExpenses");
+
+            Budget b = new Budget(year, countryCode);
+            b.setTotals(rev, exp);
+
+            // Φόρτωση αλλαγών χρήστη
+            if (obj.has("userChanges")) {
+                JSONObject changes = obj.getJSONObject("userChanges");
+                for (String key : changes.keySet()) {
+                    long value = changes.getLong(key);
+                    b.setUserValue(key, value);
+                }
+            }
+
+            this.budgetsByYear.put(year, b);
+        }
+    }
+
 }
