@@ -9,11 +9,12 @@ import java.util.List;
 import java.util.ArrayList;
 
 /**
- * Προσωρινή κλάση Budget με φόρτωση δεδομένων από το WorldBank API.
+ * Κλάση Budget με φόρτωση δεδομένων από το WorldBank API.
  * Υποστηρίζει:
  * - χώρα (countryCode)
  * - έτος (year) – προς το παρόν δεν το χρησιμοποιούμε στο API query,
  *   αλλά το κρατάμε για μελλοντική χρήση.
+ * -indicator για την φορτωση δυο δεικτων(revenues και expenses)
  */
 public class Budget {
     // Αλλαγές που έκανε ο χρήστης (overrides στις API τιμές)
@@ -24,6 +25,11 @@ public class Budget {
 
     private long totalRevenue = 0L;
     private long totalExpenses = 0L;
+
+    //Οι δεικτες που παιρνουμε απο το API
+    private static final long ESTIMATED_GDP = 200_000_000_000L; 
+    private static final String INDICATOR_EXPENSES = "GC.XPN.TOTL.GD.ZS";
+    private static final String INDICATOR_REVENUE  = "GC.REV.XGRT.GD.ZS";
 
     // Αποθηκεύει τις "ακατέργαστες" τιμές που προέρχονται από το API
     private final Map<String, Long> apiValues = new HashMap<>();
@@ -69,63 +75,66 @@ public class Budget {
      * όταν φτιάξουμε πιο εξειδικευμένο API query.)
      */
     public void loadFromApi() {
-        totalRevenue = 0L;
-        totalExpenses = 0L;
+        this.totalRevenue = 0L;
+        this.totalExpenses = 0L;
         apiValues.clear();
 
+        long expenses = fetchMetric(INDICATOR_EXPENSES);
+        long revenues = fetchMetric(INDICATOR_REVENUE);
+
+        // Αν και τα δύο είναι 0, κάτι πήγε στραβά ή δεν υπάρχουν δεδομένα
+        if (expenses == 0 && revenues == 0) {
+            System.out.println("Δεν βρέθηκαν δεδομένα (Έσοδα/Έξοδα) για το έτος " + this.year);
+            return;
+        }
+
+        // Ενημερωση των μεταβλητές της κλάσης
+        this.totalExpenses = expenses;
+        this.totalRevenue = revenues;
+
+        // Αποθηκευση των εξοδων στο map
+        apiValues.put(INDICATOR_EXPENSES, totalExpenses);
+
+        //Υπολογισμός υπο-κατηγοριών Υγείας (με βάση τα έξοδα)
+        long healthTotal = totalExpenses;
+        
+        long hospitals  = healthTotal * 50 / 100; //50% νοσοκομεια
+        long pharma     = healthTotal * 20 / 100; //20% φαρμακευτικο υλικο
+        long prevention = healthTotal * 15 / 100; // 10% προληψη
+        long staff      = healthTotal - hospitals - pharma - prevention;
+
+        apiValues.put("HEALTH_TOTAL", healthTotal);
+        apiValues.put("HOSPITALS",    hospitals);
+        apiValues.put("PHARMA",       pharma);
+        apiValues.put("PREVENTION",   prevention);
+        apiValues.put("STAFF",        staff);
+        
+    }
+
+    private long fetchMetric(String indicator) {
         try {
-            JSONArray data = BudgetApiReader.fetchBudgetData(countryCode);
-            if (data == null || data.length() < 2) {
-                return;
-            }
-
+            // Κλήση στο API με κωδικο χωρας, ετος, δεικτη
+            JSONArray data = BudgetApiReader.fetchBudgetData(countryCode, this.year, indicator);
+            
+            if (data == null || data.length() < 2) return 0;
+            
             JSONArray observations = data.getJSONArray(1);
-            if (observations.length() == 0) {
-                return;
-            }
+            if (observations.length() == 0) return 0;
 
-            // Παίρνουμε την πρώτη μη-κενή τιμή "value"
-            Long latestValue = null;
             for (int i = 0; i < observations.length(); i++) {
-                JSONObject obj = observations.getJSONObject(i);
+                
+                JSONObject obj = observations.getJSONObject(i); 
+                
                 if (!obj.isNull("value")) {
-                    double v = obj.getDouble("value");
-                    latestValue = Math.round(Math.abs(v));
-                    break;
+                    double percentage = obj.getDouble("value");
+                    
+                    return Math.round((Math.abs(percentage) / 100.0) * ESTIMATED_GDP);
                 }
             }
-
-            if (latestValue == null) {
-                return;
-            }
-
-            // Προς το παρόν θεωρούμε ότι η τιμή αυτή είναι "έξοδα"
-            totalExpenses = latestValue;
-            totalRevenue = 0L;
-
-            apiValues.put("GC.XPN.TOTL.GD.ZS", totalExpenses);
-
-            // Θεωρούμε ότι ΟΛΑ τα έξοδα ανήκουν στο "HEALTH_TOTAL"
-            long healthTotal = totalExpenses;
-
-            // Σπάμε το healthTotal σε υπο-κατηγορίες:
-            long hospitals  = healthTotal * 50 / 100;  // 50% νοσοκομεία
-            long pharma     = healthTotal * 20 / 100;  // 20% φάρμακα
-            long prevention = healthTotal * 15 / 100;  // 15% πρόληψη
-            long staff      = healthTotal - hospitals - pharma - prevention; // υπόλοιπο σε προσωπικό
-
-            apiValues.put("HEALTH_TOTAL", healthTotal);
-            apiValues.put("HOSPITALS",    hospitals);
-            apiValues.put("PHARMA",       pharma);
-            apiValues.put("PREVENTION",   prevention);
-            apiValues.put("STAFF",        staff);
-
         } catch (Exception e) {
-            System.out.println("API parsing error in Budget.loadFromApi: " + e.getMessage());
-            totalRevenue = 0L;
-            totalExpenses = 0L;
-            apiValues.clear();
+            System.out.println("Σφάλμα κατά τη λήψη του δείκτη " + indicator + ": " + e.getMessage());
         }
+        return 0; // Αν αποτύχει ή δεν βρει τιμή, επιστρέφει 0
     }
 
     public long getTotalRevenue() {

@@ -10,18 +10,19 @@ import org.json.JSONArray;
 
 public class BudgetApiReader {
 
-    private static final String API_URL = "https://api.worldbank.org/v2/country/GR/indicator/GC.XPN.TOTL.GD.ZS?format=json";
+    private static final String API_URL = "https://api.worldbank.org/v2/country/{COUNTRY}/indicator/{INDICATOR}?format=json&date={YEAR}";
+    //Τωρα μπορει να παιρνει διαφορετικα indicators(εσοδα εξοδα)
 
-    public static JSONArray fetchBudgetData(String countryCode) {
+    public static JSONArray fetchBudgetData(String countryCode, int year, String indicator) {
         try {
-            String fullUrl = API_URL.replace("GR", countryCode);
+            String fullUrl = API_URL.replace("{COUNTRY}", countryCode).replace("{INDICATOR}", indicator).replace("{YEAR}", String.valueOf(year));
             URI uri = URI.create(fullUrl);
             URL url = uri.toURL();
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 
             conn.setRequestMethod("GET");
-            conn.setConnectTimeout(5000);
-            conn.setReadTimeout(5000);
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(10000);
 
             BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
             String inputLine;
