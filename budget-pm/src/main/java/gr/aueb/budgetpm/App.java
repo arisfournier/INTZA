@@ -5,6 +5,10 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
+
+
 
 /**
  * Κεντρική εφαρμογή CLI.
@@ -27,14 +31,21 @@ public class App {
               reduce <CAT> <X>    - μείωση συγκεκριμένης κατηγορίας κατά X%%
               set year <έτος>    - επιλογή έτους (π.χ. set year 2020)
               compare <year1> <year2>  - σύγκριση δύο ετών
+              compare years <Y1> <Y2> - σύγκριση προϋπολογισμών δύο ετών
+              compare scenario <NAME> - σύγκριση σεναρίου με βασικό προϋπολογισμό
               list years         - εμφάνιση φορτωμένων ετών
               save year <έτος>   - αποθήκευση προϋπολογισμού έτους σε αρχείο
               load year <έτος>   - φόρτωση προϋπολογισμού έτους από αρχείο
+              export csv <YEAR>   - εξαγωγή κατηγοριών σε CSV (για γραφήματα)
+              scenario <NAME> <X>   - δημιουργία σεναρίου (% μεταβολή σε όλες τις κατηγορίες)
+              scenario show <NAME> - εμφάνιση τιμών ενός σεναρίου
+              list scenarios        - εμφάνιση σεναρίων
               exit               - έξοδος
             """;
 
     private static BudgetYearManager yearManager = new BudgetYearManager("GR");
     private static int currentYear = 2020;
+    private static final Map<String, BudgetScenario> scenarios = new HashMap<>();
 
     public static void main(String[] args) throws Exception {
         System.out.println(BANNER);
@@ -69,6 +80,10 @@ public class App {
                 handleSaveYear(input);
             } else if (input.startsWith("load year")) {
                 handleLoadYear(input);
+            } else if (input.startsWith("compare scenario ")) {
+                handleCompareScenario(input);
+            } else if (input.startsWith("compare years")) {
+                handleCompareYears(input);
             } else if (input.startsWith("compare ")) {
                 handleCompare(input);
             } else if (input.startsWith("compare countries")) {
@@ -79,6 +94,14 @@ public class App {
                 handleLoadAll();
             } else if (input.startsWith("set value")) {
                 handleSetValue(input);
+            } else if (input.startsWith("export csv")) {
+                handleExportCsv(input);
+            } else if (input.startsWith("scenario show ")) {
+                handleScenarioShow(input);
+            } else if (input.startsWith("scenario ")) {
+                handleScenario(input);
+            } else if (input.equals("list scenarios")) {
+                handleListScenarios();
             } else if (input.equals("exit") || input.equals("quit")) {
                 System.out.println("Αντίο!");
                 return;
@@ -349,6 +372,45 @@ public class App {
         }
     }
 
+    private static void handleCompareYears(String input) {
+        try {
+            String[] parts = input.split("\\s+");
+            if (parts.length != 4) {
+                System.out.println("Χρήση: compare years <Y1> <Y2>");
+                return;
+            }
+
+            int y1 = Integer.parseInt(parts[2]);
+            int y2 = Integer.parseInt(parts[3]);
+
+            Budget b1 = yearManager.getOrLoad(y1);
+            Budget b2 = yearManager.getOrLoad(y2);
+
+            System.out.printf("\nΣύγκριση ετών %d → %d:\n\n", y1, y2);
+
+            var results = BudgetComparator.compare(b1, b2);
+
+            System.out.printf("%-18s %12s %12s %12s\n", "Κλειδί", "Από", "Σε", "Διαφορά");
+            System.out.println("-------------------------------------------------------------");
+
+            for (var entry : results.entrySet()) {
+                String key = entry.getKey();
+                var r = entry.getValue();
+
+                System.out.printf("%-18s %,12d %,12d %,12d\n",
+                        key, r.oldValue, r.newValue, r.diff);
+        }
+
+            System.out.println();
+
+        } catch (NumberFormatException e) {
+            System.out.println("Μη έγκυρα έτη. Χρήση: compare years <Y1> <Y2>");
+        } catch (Exception e) {
+            System.out.println("Σφάλμα στο compare years: " + e.getMessage());
+        }
+    }
+
+
     private static void handleIncreaseAll(String input) {
         try {
             String[] parts = input.split("\\s+");
@@ -547,6 +609,169 @@ public class App {
             System.out.println("Σφάλμα στο reduce <CATEGORY>: " + e.getMessage());
         }
     }
+
+    private static void handleExportCsv(String input) {
+        try {
+            String[] parts = input.split("\\s+");
+            if (parts.length != 3) {
+                System.out.println("Χρήση: export csv <YEAR>");
+                return;
+            }
+
+            int year = Integer.parseInt(parts[2]);
+            Budget b = yearManager.getOrLoad(year);
+
+            java.nio.file.Path dir = java.nio.file.Path.of("data");
+            if (!java.nio.file.Files.exists(dir)) {
+                java.nio.file.Files.createDirectories(dir);
+            }
+
+            java.nio.file.Path file = dir.resolve("export-" + year + ".csv");
+
+            // Γράφουμε CSV με τελικές τιμές ανά κατηγορία (όπως τις βλέπει ο χρήστης)
+            StringBuilder sb = new StringBuilder();
+            sb.append("Category,Value\n");
+            for (BudgetCategory c : b.getCategories()) {
+                sb.append(c.getName()).append(",").append(c.getAmount()).append("\n");
+            }
+
+            java.nio.file.Files.writeString(file, sb.toString(), java.nio.charset.StandardCharsets.UTF_8);
+
+            System.out.println("Έγινε export σε CSV: " + file);
+
+        } catch (NumberFormatException e) {
+            System.out.println("Μη έγκυρο έτος. Χρήση: export csv <YEAR>");
+        } catch (Exception e) {
+            System.out.println("Σφάλμα στο export csv: " + e.getMessage());
+        }
+    }
+
+    private static void handleScenario(String input) {
+        try {
+            String[] parts = input.split("\\s+");
+            if (parts.length != 3) {
+                System.out.println("Χρήση: scenario <NAME> <percent>");
+                return;
+            }
+
+            if (currentYear < 0) {
+                System.out.println("Πρώτα ορίστε έτος με: set year <YEAR>");
+                return;
+            }
+
+            String name = parts[1];
+            double percent = Double.parseDouble(parts[2]);
+
+            Budget base = yearManager.getOrLoad(currentYear);
+            BudgetScenario sc = new BudgetScenario(name, base, percent);
+
+            scenarios.put(name, sc);
+
+            System.out.printf("Δημιουργήθηκε σενάριο '%s' με μεταβολή %.2f%%%n", name, percent);
+
+        } catch (NumberFormatException e) {
+            System.out.println("Μη έγκυρο ποσοστό.");
+        } catch (Exception e) {
+            System.out.println("Σφάλμα στο scenario: " + e.getMessage());
+        }
+    }
+
+    private static void handleListScenarios() {
+        if (scenarios.isEmpty()) {
+            System.out.println("Δεν υπάρχουν σενάρια.");
+            return;
+        }
+
+        System.out.println("Διαθέσιμα σενάρια:");
+        for (String name : scenarios.keySet()) {
+            System.out.println(" - " + name);
+        }
+    }
+
+    private static void handleScenarioShow(String input) {
+        try {
+            String[] parts = input.split("\\s+");
+            if (parts.length != 3) {
+                System.out.println("Χρήση: scenario show <NAME>");
+                return;
+            }
+
+            String name = parts[2];
+            BudgetScenario sc = scenarios.get(name);
+
+            if (sc == null) {
+                System.out.println("Δεν βρέθηκε σενάριο με όνομα: " + name);
+                System.out.println("Δες: list scenarios");
+                return;
+            }
+
+            System.out.println("\nΣενάριο: " + sc.getName());
+            System.out.println("-------------------------------------------");
+            System.out.printf("%-15s %15s%n", "Κατηγορία", "Τιμή");
+            System.out.println("-------------------------------------------");
+
+            var values = sc.getAllCategoryValues();
+            var keys = new java.util.TreeSet<>(values.keySet());
+
+            for (String k : keys) {
+                System.out.printf("%-15s %,15d%n", k, values.get(k));
+            }
+
+            System.out.println();
+
+        } catch (Exception e) {
+            System.out.println("Σφάλμα στο scenario show: " + e.getMessage());
+        }
+    }
+
+    private static void handleCompareScenario(String input) {
+        try {
+            String[] parts = input.split("\\s+");
+            if (parts.length != 3) {
+                System.out.println("Χρήση: compare scenario <NAME>");
+                return;
+            }
+
+            String name = parts[2];
+            BudgetScenario sc = scenarios.get(name);
+
+            if (sc == null) {
+                System.out.println("Δεν βρέθηκε σενάριο: " + name);
+                return;
+            }
+
+            if (currentYear < 0) {
+                System.out.println("Πρώτα ορίστε έτος με: set year <YEAR>");
+                return;
+            }
+            Budget base = yearManager.getOrLoad(currentYear);
+
+            System.out.println("\nΣύγκριση σεναρίου '" + name + "' με baseline");
+            System.out.println("-------------------------------------------------------------");
+            System.out.printf("%-15s %15s %15s %15s%n",
+                    "Κατηγορία", "Baseline", "Scenario", "Διαφορά");
+            System.out.println("-------------------------------------------------------------");
+
+            var scenarioValues = sc.getAllCategoryValues();
+
+            for (BudgetCategory c : base.getCategories()) {
+                String cat = c.getName().toUpperCase();
+                long baseline = c.getAmount();
+                long scenario = scenarioValues.getOrDefault(cat, baseline);
+                long diff = scenario - baseline;
+
+                System.out.printf(
+                    "%-15s %,15d %,15d %,15d%n",
+                    cat, baseline, scenario, diff
+            );
+        }
+
+            System.out.println();
+
+        } catch (Exception e) {
+            System.out.println("Σφάλμα στο compare scenario: " + e.getMessage());
+        }
+    } 
 
 
 
