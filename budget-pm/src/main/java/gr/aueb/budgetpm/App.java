@@ -793,9 +793,9 @@ public class App {
         long balance = computeBalance(revenues, expenses);
 
         System.out.println("\n— Σύνοψη προϋπολογισμού (" + currentYear + ") —");
-        System.out.printf("  Έσοδα : %,d €%n", revenues);
-        System.out.printf("  Έξοδα : %,d €%n", expenses);
-        System.out.printf("  Ισοζύγιο: %,d €%n", balance);
+        System.out.println("  Έσοδα : " + formatMoney(revenues));
+        System.out.println("  Έξοδα : " + formatMoney(expenses));
+        System.out.println("  Ισοζύγιο : " + formatMoney(balance));
 
         if (balance < 0) {
             System.out.println("  (Έλλειμμα)");
@@ -849,7 +849,7 @@ public class App {
         }
 
         for (BudgetCategory c : categories) {
-            System.out.printf("  - %s : %,d €%n", c.getName(), c.getAmount());
+            System.out.printf("  - %-15s : %s%n", c.getName(), formatMoney(c.getAmount()));
         }
 
         System.out.println();
@@ -871,5 +871,19 @@ public class App {
             System.out.println(marker + y);
         }
         System.out.println();
+    }
+
+    // Μορφοποιηση ποσων - αποτελεσματων (π.χ. 1.5 δις €)
+    private static String formatMoney(long amount) {
+        if (amount >= 1_000_000_000L) {
+            // Αν είναι πάνω από 1 δις, το διαιρούμε και βάζουμε "δις"
+            return String.format("%.2f δις €", amount / 1_000_000_000.0);
+        } else if (amount >= 1_000_000L) {
+            // Αν είναι πάνω από 1 εκατομμύριο, βάζουμε "εκ."
+            return String.format("%.2f εκ. €", amount / 1_000_000.0);
+        } else {
+            // Αν είναι μικρό ποσό, το δείχνουμε ολόκληρο
+            return String.format("%,d €", amount);
+        }
     }
 }
