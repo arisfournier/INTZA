@@ -621,21 +621,8 @@ public class App {
             int year = Integer.parseInt(parts[2]);
             Budget b = yearManager.getOrLoad(year);
 
-            java.nio.file.Path dir = java.nio.file.Path.of("data");
-            if (!java.nio.file.Files.exists(dir)) {
-                java.nio.file.Files.createDirectories(dir);
-            }
-
-            java.nio.file.Path file = dir.resolve("export-" + year + ".csv");
-
-            // Γράφουμε CSV με τελικές τιμές ανά κατηγορία (όπως τις βλέπει ο χρήστης)
-            StringBuilder sb = new StringBuilder();
-            sb.append("Category,Value\n");
-            for (BudgetCategory c : b.getCategories()) {
-                sb.append(c.getName()).append(",").append(c.getAmount()).append("\n");
-            }
-
-            java.nio.file.Files.writeString(file, sb.toString(), java.nio.charset.StandardCharsets.UTF_8);
+            java.nio.file.Path file = java.nio.file.Path.of("data", "export-" + year + ".csv");
+            CSVExporter.exportCategories(b, file);
 
             System.out.println("Έγινε export σε CSV: " + file);
 
