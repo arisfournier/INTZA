@@ -24,7 +24,8 @@ public class App {
               help               - βοήθεια
               show summary       - εμφάνιση συνοπτικών στοιχείων
               show changes        - εμφάνιση αλλαγών χρήστη για το τρέχον έτος
-              show categories    - εμφάνιση κατηγοριών
+              show ministries    - εμφάνιση συνόλων ανά Υπουργείο
+              show ministries <X> - αναζήτηση/ανάλυση (HEALTH, EDU, DEF, PROT, FOR, INT, LABOR, OTHER)
               increase all <X>    - αύξηση όλων των κατηγοριών κατά X%%
               increase <CAT> <X>  - αύξηση συγκεκριμένης κατηγορίας κατά X%%
               reduce all <X>      - μείωση όλων των κατηγοριών κατά X%%
@@ -57,13 +58,19 @@ public class App {
             String input = reader.readLine().trim().toLowerCase();
 
             if (input.equals("help")) {
-                System.out.println(BANNER);
-            } else if (input.equals("show summary")) {
+                System.out.println(BANNER);} else if (input.equals("show summary")) {
                 showSummary();
             } else if (input.equals("show changes")) {
-                showChanges();
-            } else if (input.equals("show categories")) {
-                showCategories();
+                showChanges();} else if (input.startsWith("show ministries")) {
+                // Έλεγχος αν δόθηκε όνομα υπουργείου (π.χ. HEALTH)
+                String[] parts = input.split("\\s+");
+                if (parts.length > 2) {
+                    String filter = parts[2].toUpperCase(); 
+                    showMinistries(filter);
+                } else {
+                    // Χωρίς όνομα -> Σύνοψη
+                    showMinistries(null);
+                }
             } else if (input.startsWith("increase all")) {
                 handleIncreaseAll(input);
             } else if (input.startsWith("increase ")) {
@@ -332,43 +339,55 @@ public class App {
  * Συγκρίνει τις τελικές τιμές ανά κατηγορία μεταξύ δύο ετών.
  */
     private static void handleCompare(String input) {
-        try {
-            String[] parts = input.split("\\s+");
-            if (parts.length != 3) {
-                System.out.println("Χρήση: compare <YEAR1> <YEAR2>");
-                return;
-            }
+        String[] parts = input.split("\\s+");
+        if (parts.length < 3) {
+            System.out.println("Σφάλμα: Δώσε δύο έτη (π.χ. compare 2020 2023)");
+            return;
+        }
 
+        try {
             int y1 = Integer.parseInt(parts[1]);
             int y2 = Integer.parseInt(parts[2]);
 
             Budget b1 = yearManager.getOrLoad(y1);
             Budget b2 = yearManager.getOrLoad(y2);
 
-            System.out.printf("\nΣύγκριση προϋπολογισμών (%d → %d)\n\n", y1, y2);
-            System.out.printf("%-15s %15s %15s %15s\n", 
-                "Κατηγορία", y1, y2, "Διαφορά");
-            System.out.println("--------------------------------------------------------------");
+            // Υπολογισμός διαφορών
+            var results = BudgetComparator.compare(b1, b2);
 
-            // Βρίσκουμε ΟΛΕΣ τις κατηγορίες που υπάρχουν σε κάποιο από τα δύο έτη
-            var categories = new java.util.TreeSet<String>();
-            for (var cat : b1.getCategories()) categories.add(cat.getName());
-            for (var cat : b2.getCategories()) categories.add(cat.getName());
+            System.out.printf("%n=== Σύγκριση %d vs %d (Σύνολα Υπουργείων) ===%n", y1, y2);
+            System.out.printf("%-30s | %-15s | %-15s | %s%n", "ΚΑΤΗΓΟΡΙΑ", y1, y2, "ΔΙΑΦΟΡΑ");
+            System.out.println("-----------------------------------------------------------------------------------------");
 
-            // Για κάθε κατηγορία, παίρνουμε τις ποσότητες
-            for (String category : categories) {
-                long v1 = b1.getFinalValueFromCategoryName(category);
-                long v2 = b2.getFinalValueFromCategoryName(category);
-                long diff = v2 - v1;
+            // Ταξινόμηση κλειδιών για να εμφανίζονται με μια σειρά (προαιρετικό, αλλά βοηθάει)
+            var sortedKeys = new java.util.TreeSet<>(results.keySet());
 
-                System.out.printf("%-15s %,15d %,15d %,15d\n",
-                    category, v1, v2, diff);
+            for (String code : sortedKeys) {
+                if (code.startsWith("MIN_") || code.equals("GC.XPN.TOTL.GD.ZS")) {
+                    
+                    var res = results.get(code);
+                    String displayName = code; 
+                    for (BudgetCategory cat : b2.getCategories()) {
+                        if (cat.getCode().equals(code)) {
+                            displayName = cat.getName();
+                            break;
+                        }
+                    }
+
+                    // Εκτύπωση γραμμής
+                    System.out.printf("%-30s | %-15s | %-15s | %s%n",
+                            displayName,
+                            formatMoney(res.oldValue),
+                            formatMoney(res.newValue),
+                            (res.diff > 0 ? "+" : "") + formatMoney(res.diff));
+                }
             }
-
             System.out.println();
 
+        } catch (NumberFormatException e) {
+            System.out.println("Σφάλμα: Τα έτη πρέπει να είναι αριθμοί.");
         } catch (Exception e) {
-            System.out.println("Σφάλμα στη σύγκριση: " + e.getMessage());
+            System.out.println("Σφάλμα κατά τη σύγκριση: " + e.getMessage());
         }
     }
 
@@ -823,22 +842,60 @@ public class App {
         System.out.println();
     }
 
-    private static void showCategories() {
+    /**
+     * Εμφανίζει τα Υπουργεία.
+     */
+    private static void showMinistries(String filter) {
         Budget b = yearManager.getOrLoad(currentYear);
-
         var categories = b.getCategories();
 
-        System.out.println("\nΚατηγορίες προϋπολογισμού (" + currentYear + "):");
+        if (filter == null) {
+            System.out.println("\n=== Συνοπτικός Προϋπολογισμός ανά Υπουργείο (" + currentYear + ") ===");
+        } else {
+            System.out.println("\n=== Αναλυτική Προβολή: '" + filter + "' (" + currentYear + ") ===");
+        }
 
         if (categories == null || categories.isEmpty()) {
             System.out.println("  (Δεν υπάρχουν διαθέσιμα δεδομένα)");
             return;
         }
 
-        for (BudgetCategory c : categories) {
-            System.out.printf("  - %-15s : %s%n", c.getName(), formatMoney(c.getAmount()));
+        boolean foundAny = false;
+        long totalAllocated = 0;
+
+        // Ταξινόμηση αλφαβητική (προαιρετικά)
+        var sortedCats = categories.stream()
+                .sorted((c1, c2) -> c1.getName().compareTo(c2.getName()))
+                .toList();
+
+        for (BudgetCategory c : sortedCats) {
+            if (filter == null) {
+
+                if (!c.getName().startsWith(" -")) {
+                    System.out.printf("  %-30s : %s%n", c.getName(), formatMoney(c.getAmount()));
+                    
+                    if (c.getCode().startsWith("MIN_")) {
+                        totalAllocated += c.getAmount();
+                    }
+                    foundAny = true;
+                }
+            } else {
+                boolean matches = c.getCode().contains(filter) 
+                               || c.getName().toUpperCase().contains(filter);
+
+                if (matches) {
+                    System.out.printf("  %-30s : %s%n", c.getName(), formatMoney(c.getAmount()));
+                    foundAny = true;
+                }
+            }
         }
 
+        if (filter == null && foundAny) {
+            System.out.println("----------------------------------------------------------");
+            System.out.println("  ΣΥΝΟΛΟ ΕΠΙΜΕΡΟΥΣ ΥΠΟΥΡΓΕΙΩΝ    : " + formatMoney(totalAllocated));
+        } else if (!foundAny) {
+            System.out.println("  Δεν βρέθηκαν εγγραφές.");
+        }
         System.out.println();
     }
 
