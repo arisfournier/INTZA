@@ -16,8 +16,8 @@ public class BudgetComparator {
         keys.addAll(b.getUserChanges().keySet());
 
         for (String key : keys) {
-            long oldValue = a.getFinalValue(key); // FINAL = API + changes
-            long newValue = b.getFinalValue(key); // FINAL = API + changes
+            long oldValue = a.getFinalValue(key);
+            long newValue = b.getFinalValue(key);
             long diff = newValue - oldValue;
 
             results.put(key, new ComparisonResult(oldValue, newValue, diff));

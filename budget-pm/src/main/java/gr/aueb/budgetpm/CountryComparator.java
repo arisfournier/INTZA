@@ -16,7 +16,7 @@ public final class CountryComparator {
         if (a == null) throw new IllegalArgumentException("budget a is null");
         if (b == null) throw new IllegalArgumentException("budget b is null");
 
-        // Παίρνουμε union κατηγοριών από τα δύο budgets
+        //Παίρνουμε τα δύο budgets
         TreeSet<String> cats = new TreeSet<>();
         for (BudgetCategory c : a.getCategories()) cats.add(c.getName().toUpperCase());
         for (BudgetCategory c : b.getCategories()) cats.add(c.getName().toUpperCase());
@@ -30,9 +30,8 @@ public final class CountryComparator {
         return res;
     }
 
-    /**
-     * Επιστρέφει ποσό κατηγορίας από το budget. Αν δεν υπάρχει, 0.
-     */
+
+    //Επιστρέφει ποσό κατηγορίας από το budget. Αν δεν υπάρχει, 0.
     private static long getCategoryAmount(Budget budget, String categoryUpper) {
         long sum = 0;
         for (BudgetCategory c : budget.getCategories()) {

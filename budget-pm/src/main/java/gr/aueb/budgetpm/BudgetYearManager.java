@@ -89,10 +89,8 @@ public class BudgetYearManager {
     }
 
 
-    /**
- * Φορτώνει όλα τα budgets από ένα JSON αρχείο και τα περνάει στον manager,
- * συμπεριλαμβανομένων των αλλαγών χρήστη (userChanges).
- */
+
+    //Φορτώνει τα budgets από ένα JSON αρχείο και τα περνάει στον manager
     public void loadAll(Path file) throws Exception {
         String json = Files.readString(file, StandardCharsets.UTF_8);
         JSONObject root = new JSONObject(json);

@@ -34,7 +34,7 @@ public class BudgetApiReader {
 
             in.close();
 
-            // To API της WorldBank επιστρέφει JSON array
+            //To API της WorldBank επιστρέφει JSON array
             JSONArray jsonArray = new JSONArray(response.toString());
 
             return jsonArray;

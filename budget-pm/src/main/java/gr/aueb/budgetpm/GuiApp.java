@@ -17,7 +17,7 @@ import java.util.Map;
 
 /**
  * Η κεντρική κλάση της εφαρμογής (GUI).
- * Διαχειρίζεται το παράθυρο, τα γεγονότα (events) και τη ροή δεδομένων.
+ * Διαχειρίζεται το παράθυρο, τα events και τη ροή δεδομένων.
  */
 public class GuiApp extends JFrame {
 
@@ -25,48 +25,41 @@ public class GuiApp extends JFrame {
     private Budget currentBudget;
     private int currentYear = 2020;
 
-    // Στοιχεία Γραφικού Περιβάλλοντος
     private JTextField txtYear;
     private JTable table;
     private DefaultTableModel tableModel;
     private JLabel lblStatus;
     private JLabel lblTotal;
     
-    // Μεταβλητή κατάστασης για την προβολή (Μόνο Υπουργεία ή Όλα)
     private boolean showOnlyMinistries = true;
 
     public GuiApp() {
-        // 1. Ρύθμιση εμφάνισης (Look and Feel)
         setupLookAndFeel();
 
-        // 2. Αρχικοποίηση Logic Manager
         this.yearManager = new BudgetYearManager("GR");
 
-        // 3. Βασικές ρυθμίσεις παραθύρου
-        this.setTitle("🏛️ Πρωθυπουργός για μια μέρα - Dashboard Pro");
+        //Βασικές ρυθμίσεις παραθύρου
+        this.setTitle("Πρωθυπουργός για μια μέρα - Dashboard Pro");
         this.setSize(1200, 800);
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         this.setLocationRelativeTo(null);
         this.setLayout(new BorderLayout());
 
-        // --- Δημιουργία UI Components ---
+        //Στοιχεια UI
         
-        // Α. Επάνω μέρος (Header)
+        //Header
         JPanel headerPanel = createHeaderPanel();
         this.add(headerPanel, BorderLayout.NORTH);
 
-        // Β. Αριστερό μέρος (Sidebar Menu)
+        //Sidebar Menu
         JPanel sidebarPanel = createSidebarPanel();
         this.add(sidebarPanel, BorderLayout.WEST);
 
-        // Γ. Κεντρικό μέρος (Table & Toolbar)
+        //Table & Toolbar
         JPanel mainContentPanel = createMainContentPanel();
         this.add(mainContentPanel, BorderLayout.CENTER);
     }
 
-    /**
-     * Δημιουργεί το πάνελ της επικεφαλίδας.
-     */
     private JPanel createHeaderPanel() {
         JPanel header = new JPanel(new FlowLayout(FlowLayout.CENTER));
         header.setBackground(new Color(44, 62, 80));
@@ -79,9 +72,7 @@ public class GuiApp extends JFrame {
         return header;
     }
 
-    /**
-     * Δημιουργεί το πλευρικό μενού με τα κουμπιά.
-     */
+    //Menu
     private JPanel createSidebarPanel() {
         JPanel sidebar = new JPanel();
         sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
@@ -130,13 +121,12 @@ public class GuiApp extends JFrame {
         sidebar.add(btnCompareTable);
         sidebar.add(Box.createVerticalStrut(10));
         
-        JButton btnScenario = createStyledButton("🧪 Νέο Σενάριο", new Color(155, 89, 182));
+        JButton btnScenario = createStyledButton("Νέο Σενάριο", new Color(155, 89, 182));
         btnScenario.addActionListener(e -> {
             showScenarioDialog();
         });
         sidebar.add(btnScenario);
         
-        // Κενό για να πάει το Save κάτω
         sidebar.add(Box.createVerticalGlue());
         
         JButton btnSave = createStyledButton("💾 Αποθήκευση", new Color(192, 57, 43));
@@ -148,13 +138,11 @@ public class GuiApp extends JFrame {
         return sidebar;
     }
 
-    /**
-     * Δημιουργεί το κεντρικό πάνελ με τον πίνακα και την toolbar.
-     */
+    //Κεντρικό Πάνελ
     private JPanel createMainContentPanel() {
         JPanel mainPanel = new JPanel(new BorderLayout());
         
-        // 1. Toolbar Εργαλείων
+        //Εργαλεία
         JToolBar toolbar = new JToolBar();
         toolbar.setFloatable(false);
         
@@ -169,10 +157,8 @@ public class GuiApp extends JFrame {
         toolbar.add(new JLabel(" 💡 Tip: Διπλό κλικ σε Υπουργείο για ανάλυση | Διπλό κλικ σε ποσό για αλλαγή"));
         mainPanel.add(toolbar, BorderLayout.NORTH);
 
-        // 2. Ρύθμιση Πίνακα (Table)
-        String[] columnNames = {"HiddenCode", "Κατηγορία / Υπουργείο", "Ποσό (€)"};
+        String[] columnNames = {"HiddenCode", "Υπουργείο", "Ποσό (€)"};
         
-        // Δημιουργία Μοντέλου Πίνακα (απαγορεύουμε την απευθείας επεξεργασία κελιών)
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -185,16 +171,14 @@ public class GuiApp extends JFrame {
         table.setFont(new Font("SansSerif", Font.PLAIN, 14));
         table.setAutoCreateRowSorter(true);
         
-        // Απόκρυψη της πρώτης στήλης (Κωδικός) για να είναι πιο καθαρό το UI
         TableColumnModel tcm = table.getColumnModel();
         tcm.removeColumn(tcm.getColumn(0));
         
-        // Στοίχιση της στήλης ποσών στα δεξιά
         DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer();
         rightRenderer.setHorizontalAlignment(JLabel.RIGHT);
         table.getColumnModel().getColumn(1).setCellRenderer(rightRenderer);
 
-        // Προσθήκη Listener για το διπλό κλικ
+        //Listener για το διπλό κλικ
         table.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -206,7 +190,7 @@ public class GuiApp extends JFrame {
 
         mainPanel.add(new JScrollPane(table), BorderLayout.CENTER);
 
-        // 3. Footer (Status bar)
+        //Status bar
         JPanel footer = new JPanel(new BorderLayout());
         footer.setBackground(Color.LIGHT_GRAY);
         footer.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
@@ -223,11 +207,8 @@ public class GuiApp extends JFrame {
         return mainPanel;
     }
 
-    // =========================================================================
-    //                            LOGIC METHODS
-    // =========================================================================
-
     /**
+     *          Λογικη
      * Φορτώνει τα δεδομένα για το επιλεγμένο έτος.
      * Χρησιμοποιεί SwingWorker για να μην "παγώνει" το περιβάλλον.
      */
@@ -239,7 +220,6 @@ public class GuiApp extends JFrame {
             
             lblStatus.setText("Φόρτωση δεδομένων...");
             
-            // Εκτέλεση στο background
             new SwingWorker<Budget, Void>() {
                 @Override
                 protected Budget doInBackground() throws Exception {
@@ -265,21 +245,17 @@ public class GuiApp extends JFrame {
         }
     }
 
-    /**
-     * Ανανεώνει τα περιεχόμενα του πίνακα με βάση τα δεδομένα του currentBudget.
-     */
     private void refreshTable() {
         if (currentBudget == null) {
             return;
         }
 
-        // Καθαρισμός πίνακα
         tableModel.setRowCount(0);
         long grandTotal = 0;
 
         List<BudgetCategory> categories = currentBudget.getCategories();
         
-        // Ταξινόμηση λίστας κατά όνομα
+        //Ταξινόμηση λίστας κατά όνομα
         categories.sort((c1, c2) -> {
             return c1.getName().compareTo(c2.getName());
         });
@@ -288,7 +264,7 @@ public class GuiApp extends JFrame {
             boolean isMinistry = c.getCode().startsWith("MIN_") || c.getCode().startsWith("OTHER");
             boolean isSubCategory = c.getName().startsWith(" -");
 
-            // Λογική φιλτραρίσματος εμφάνισης
+            //Φιλτράρισμα
             if (showOnlyMinistries) {
                 if (!isSubCategory) {
                     addCategoryToTable(c);
@@ -297,7 +273,6 @@ public class GuiApp extends JFrame {
                     }
                 }
             } else {
-                // Εμφάνιση όλων
                 addCategoryToTable(c);
                 if (isMinistry) {
                     grandTotal += c.getAmount();
@@ -319,8 +294,8 @@ public class GuiApp extends JFrame {
 
     /**
      * Διαχειρίζεται το διπλό κλικ στον πίνακα.
-     * - Αν είναι Υπουργείο -> Drill Down.
-     * - Αν είναι Υποκατηγορία -> Edit Value.
+     * -Υπουργείο - Drill Down.
+     * -Υποκατηγορία - Edit Value.
      */
     private void handleDoubleClick() {
         int viewRow = table.getSelectedRow();
@@ -328,7 +303,6 @@ public class GuiApp extends JFrame {
             return;
         }
         
-        // Μετατροπή δείκτη γραμμής (σε περίπτωση που ο χρήστης έχει κάνει sort)
         int modelRow = table.convertRowIndexToModel(viewRow);
 
         String code = (String) tableModel.getValueAt(modelRow, 0);
@@ -342,9 +316,7 @@ public class GuiApp extends JFrame {
         }
     }
 
-    /**
-     * Εμφανίζει παράθυρο διαλόγου με τις υποκατηγορίες του Υπουργείου.
-     */
+    //Παραθυρο υποκατηγοριων
     private void showMinistryDetails(String ministryCode, String ministryName) {
         String filterKey = getFilterKey(ministryCode);
         
@@ -357,15 +329,13 @@ public class GuiApp extends JFrame {
 
         long sum = 0;
         for (BudgetCategory c : currentBudget.getCategories()) {
-            // Βρίσκουμε τις υποκατηγορίες που ανήκουν σε αυτό το υπουργείο
             if (c.getCode().contains(filterKey) && !c.getCode().equals(ministryCode)) {
                 detailModel.addRow(new Object[]{c.getName(), formatMoney(c.getAmount())});
                 sum += c.getAmount();
             }
         }
         
-        // Προσθήκη γραμμής συνόλου
-        detailModel.addRow(new Object[]{"----------------", "----------------"});
+        detailModel.addRow(new Object[]{"---------------", "---------------"});
         detailModel.addRow(new Object[]{"ΣΥΝΟΛΟ ΥΠΟΚΑΤΗΓΟΡΙΩΝ", formatMoney(sum)});
 
         JTable detailTable = new JTable(detailModel);
@@ -376,9 +346,6 @@ public class GuiApp extends JFrame {
         dialog.setVisible(true);
     }
 
-    /**
-     * Βοηθητική μέθοδος για αντιστοίχιση κωδικού Υπουργείου με κωδικό υποκατηγοριών.
-     */
     private String getFilterKey(String minCode) {
         if (minCode.contains("HEALTH")) return "HEALTH";
         if (minCode.contains("EDUCATION")) return "EDU";
@@ -390,15 +357,11 @@ public class GuiApp extends JFrame {
         return "OTHER";
     }
 
-    /**
-     * Εμφανίζει διάλογο για αλλαγή τιμής.
-     */
     private void askToEditValue(String code, String name, long currentVal) {
         String input = JOptionPane.showInputDialog(this, "Επεξεργασία ποσού για:\n" + name, currentVal);
         
         if (input != null) {
             try {
-                // Καθαρισμός του input από τελείες και κόμματα για να γίνει parse
                 String cleanInput = input.replace(".", "").replace(",", "");
                 long newVal = Long.parseLong(cleanInput);
                 
@@ -411,9 +374,7 @@ public class GuiApp extends JFrame {
         }
     }
 
-    /**
-     * Αποθήκευση δεδομένων σε αρχείο JSON.
-     */
+    //Αποθήκευση δεδομένων σε αρχείο JSON.
     private void saveData() {
         if (currentBudget == null) {
             JOptionPane.showMessageDialog(this, "Δεν υπάρχουν δεδομένα για αποθήκευση.");
@@ -422,8 +383,7 @@ public class GuiApp extends JFrame {
         
         try {
             Path path = Paths.get("data", "all-budgets.json");
-            
-            // Δημιουργία φακέλου αν δεν υπάρχει
+
             if (!java.nio.file.Files.exists(path.getParent())) {
                 java.nio.file.Files.createDirectories(path.getParent());
             }
@@ -437,9 +397,7 @@ public class GuiApp extends JFrame {
         }
     }
 
-    // =========================================================================
-    //                            DIALOG LAUNCHERS
-    // =========================================================================
+    //Παραθυρα διαλογων
 
     private void showChartDialog() {
         if (currentBudget == null) {
@@ -458,7 +416,6 @@ public class GuiApp extends JFrame {
             }
         }
         
-        // Χρήση της κλάσης GuiCharts
         GuiCharts.BarChartPanel chartPanel = new GuiCharts.BarChartPanel(data);
         d.add(new JScrollPane(chartPanel));
         d.setVisible(true);
@@ -494,7 +451,6 @@ public class GuiApp extends JFrame {
                 }
             }
             
-            // Χρήση της κλάσης GuiCharts
             GuiCharts.ComparisonChartPanel chart = new GuiCharts.ComparisonChartPanel(labels, v1, v2, currentYear, targetYear);
             d.add(new JScrollPane(chart));
             d.setVisible(true);
@@ -522,7 +478,6 @@ public class GuiApp extends JFrame {
             for (String key : results.keySet()) {
                 if (key.startsWith("MIN_") || key.equals("GC.XPN.TOTL.GD.ZS")) {
                      String name = key;
-                     // Εύρεση ονόματος
                      for (BudgetCategory c : currentBudget.getCategories()) {
                          if (c.getCode().equals(key)) {
                              name = c.getName();
@@ -600,9 +555,7 @@ public class GuiApp extends JFrame {
         }
     }
 
-    // =========================================================================
-    //                            HELPERS
-    // =========================================================================
+    //Βοηθητικες κλασεις
 
     private String formatMoney(long amount) {
         return NumberFormat.getInstance(Locale.GERMANY).format(amount) + " €";
@@ -617,7 +570,7 @@ public class GuiApp extends JFrame {
                 }
             }
         } catch (Exception e) {
-            // Αγνοούμε το σφάλμα, θα χρησιμοποιηθεί το default look
+            //Αγνοηση σφαλματος
         }
     }
 

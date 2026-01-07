@@ -20,7 +20,6 @@ public final class CSVExporter {
         if (budget == null) throw new IllegalArgumentException("budget is null");
         if (outputFile == null) throw new IllegalArgumentException("outputFile is null");
 
-        // Ensure parent directory exists
         Path parent = outputFile.getParent();
         if (parent != null && !Files.exists(parent)) {
             Files.createDirectories(parent);
@@ -39,9 +38,6 @@ public final class CSVExporter {
         return outputFile;
     }
 
-    /**
-     * Απλό CSV escaping (για κόμματα/quotes/newlines).
-     */
     private static String escapeCsv(String s) {
         if (s == null) return "";
         boolean needsQuotes = s.contains(",") || s.contains("\"") || s.contains("\n") || s.contains("\r");

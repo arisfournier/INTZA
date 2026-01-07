@@ -36,9 +36,7 @@ public class BudgetCategory {
         this.amount = amount;
     }
 
-    /**
-     * Προσθέτει στο τρέχον ποσό ένα επιπλέον ποσό.
-     */
+    //Προσθέτει στο τρέχον ποσό ένα επιπλέον ποσό.
     public void addAmount(long delta) {
         this.amount += delta;
     }

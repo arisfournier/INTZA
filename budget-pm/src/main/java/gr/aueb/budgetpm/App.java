@@ -62,13 +62,13 @@ public class App {
                 showSummary();
             } else if (input.equals("show changes")) {
                 showChanges();} else if (input.startsWith("show ministries")) {
-                // Έλεγχος αν δόθηκε όνομα υπουργείου (π.χ. HEALTH)
+                //Έλεγχος αν δόθηκε όνομα υπουργείου
                 String[] parts = input.split("\\s+");
                 if (parts.length > 2) {
                     String filter = parts[2].toUpperCase(); 
                     showMinistries(filter);
                 } else {
-                    // Χωρίς όνομα -> Σύνοψη
+                    //Χωρίς όνομα - Σύνοψη
                     showMinistries(null);
                 }
             } else if (input.startsWith("increase all")) {
@@ -148,16 +148,13 @@ public class App {
 
             int year = Integer.parseInt(parts[2]);
 
-            // Πάρε το budget για αυτό το έτος (θα το φορτώσει από API αν δεν υπάρχει)
             Budget b = yearManager.getOrLoad(year);
 
-            // Φάκελος αποθήκευσης
             Path dir = Paths.get("data");
             if (!Files.exists(dir)) {
                 Files.createDirectories(dir);
             }
 
-            // Όνομα αρχείου π.χ. data/budget-2020.json
             Path file = dir.resolve("budget-" + year + ".json");
 
             BudgetStorage.saveBudget(b, file);
@@ -192,7 +189,6 @@ public class App {
 
             Budget loaded = BudgetStorage.loadBudget(file);
 
-            // Βάζουμε το φορτωμένο budget στον yearManager
             yearManager.putBudget(year, loaded);
             currentYear = year;
 
@@ -208,7 +204,6 @@ public class App {
     private static void handleCompareCountries(String input) {
         try {
             String[] parts = input.split("\\s+");
-            // Αναμένουμε: compare countries GR IT 2020
             if (parts.length != 5) {
                 System.out.println("Χρήση: compare countries <C1> <C2> <year>");
                 return;
@@ -220,7 +215,6 @@ public class App {
 
             System.out.println("\nΦόρτωση δεδομένων...");
 
-            // Φόρτωση budget για κάθε χώρα/έτος
             BudgetYearManager mgr1 = new BudgetYearManager(country1);
             BudgetYearManager mgr2 = new BudgetYearManager(country2);
 
@@ -307,7 +301,6 @@ public class App {
             String category = parts[2].toUpperCase();
             long amount = Long.parseLong(parts[3]);
 
-            // Έλεγχος περιορισμών
             if (amount < 0) {
                 System.out.println("Το ποσό δεν μπορεί να είναι αρνητικό!");
                 return;
@@ -315,14 +308,12 @@ public class App {
 
             Budget budget = yearManager.getOrLoad(currentYear);
 
-            // Έλεγχος αν υπάρχει η κατηγορία
             if (!budget.getApiValues().containsKey(category) &&
                 !budget.getUserChanges().containsKey(category)) {
                 System.out.println("Η κατηγορία '" + category + "' δεν υπάρχει στο budget.");
                 return;
             }
 
-            // Καταχώρηση αλλαγής
             budget.setUserValue(category, amount);
 
             System.out.println("Η κατηγορία " + category + " ενημερώθηκε σε: " + amount + " €");
@@ -352,14 +343,12 @@ public class App {
             Budget b1 = yearManager.getOrLoad(y1);
             Budget b2 = yearManager.getOrLoad(y2);
 
-            // Υπολογισμός διαφορών
             var results = BudgetComparator.compare(b1, b2);
 
             System.out.printf("%n=== Σύγκριση %d vs %d (Σύνολα Υπουργείων) ===%n", y1, y2);
             System.out.printf("%-30s | %-15s | %-15s | %s%n", "ΚΑΤΗΓΟΡΙΑ", y1, y2, "ΔΙΑΦΟΡΑ");
             System.out.println("-----------------------------------------------------------------------------------------");
 
-            // Ταξινόμηση κλειδιών για να εμφανίζονται με μια σειρά (προαιρετικό, αλλά βοηθάει)
             var sortedKeys = new java.util.TreeSet<>(results.keySet());
 
             for (String code : sortedKeys) {
@@ -374,7 +363,6 @@ public class App {
                         }
                     }
 
-                    // Εκτύπωση γραμμής
                     System.out.printf("%-30s | %-15s | %-15s | %s%n",
                             displayName,
                             formatMoney(res.oldValue),
@@ -449,7 +437,6 @@ public class App {
             var apiValues = b.getApiValues();
             var changes = b.getUserChanges();
 
-            // Εφαρμόζουμε σε όλα τα κλειδιά του API
             for (String key : apiValues.keySet()) {
                 long current = b.getFinalValue(key);
                 long newValue = Math.round(current * (1 + percent / 100.0));
@@ -457,7 +444,6 @@ public class App {
                 b.setUserValue(key, newValue);
             }
 
-            // Και σε κλειδιά που υπάρχουν μόνο στα userChanges
             for (String key : changes.keySet()) {
                 if (apiValues.containsKey(key)) continue;
                 long current = b.getFinalValue(key);
@@ -478,14 +464,12 @@ public class App {
     private static void handleIncreaseCategory(String input) {
         try {
             String[] parts = input.split("\\s+");
-            // increase <CAT> <percent>
             if (parts.length != 3) {
                 System.out.println("Χρήση: increase <CATEGORY> <percent>");
                 return;
             }
 
             if ("all".equalsIgnoreCase(parts[1])) {
-                // Αυτό το case το πιάνει ήδη η handleIncreaseAll
                 handleIncreaseAll(input);
                 return;
             }
@@ -500,7 +484,6 @@ public class App {
 
             Budget b = yearManager.getOrLoad(currentYear);
 
-            // Έλεγχος αν υπάρχει η κατηγορία ως "κλειδί" (όπως στο set value)
             if (!b.getApiValues().containsKey(category) &&
                 !b.getUserChanges().containsKey(category)) {
                 System.out.println("Η κατηγορία '" + category + "' δεν υπάρχει στο budget.");
@@ -578,7 +561,6 @@ public class App {
     private static void handleReduceCategory(String input) {
         try {
             String[] parts = input.split("\\s+");
-            // reduce <CAT> <percent>
             if (parts.length != 3) {
                 System.out.println("Χρήση: reduce <CATEGORY> <percent>");
                 return;
@@ -778,15 +760,11 @@ public class App {
             System.out.println("Σφάλμα στο compare scenario: " + e.getMessage());
         }
     } 
-
-
-
-    // Υπολογισμός ισοζυγίου (έσοδα - έξοδα) σε long
     public static long computeBalance(long revenues, long expenses) {
         return revenues - expenses;
     }
 
-    // Υπολογισμός ισοζυγίου (έσοδα - έξοδα) σε int (για τα tests)
+    //Υπολογισμός ισοζυγίου σε int (για τα tests)
     public static int computeBalance(int revenues, int expenses) {
         return revenues - expenses;
     }
@@ -842,9 +820,6 @@ public class App {
         System.out.println();
     }
 
-    /**
-     * Εμφανίζει τα Υπουργεία.
-     */
     private static void showMinistries(String filter) {
         Budget b = yearManager.getOrLoad(currentYear);
         var categories = b.getCategories();
@@ -863,7 +838,6 @@ public class App {
         boolean foundAny = false;
         long totalAllocated = 0;
 
-        // Ταξινόμηση αλφαβητική (προαιρετικά)
         var sortedCats = categories.stream()
                 .sorted((c1, c2) -> c1.getName().compareTo(c2.getName()))
                 .toList();
@@ -917,16 +891,13 @@ public class App {
         System.out.println();
     }
 
-    // Μορφοποιηση ποσων - αποτελεσματων (π.χ. 1.5 δις €)
+    //Μορφοποιηση ποσων - αποτελεσματων
     private static String formatMoney(long amount) {
         if (amount >= 1_000_000_000L) {
-            // Αν είναι πάνω από 1 δις, το διαιρούμε και βάζουμε "δις"
             return String.format("%.2f δις €", amount / 1_000_000_000.0);
         } else if (amount >= 1_000_000L) {
-            // Αν είναι πάνω από 1 εκατομμύριο, βάζουμε "εκ."
             return String.format("%.2f εκ. €", amount / 1_000_000.0);
         } else {
-            // Αν είναι μικρό ποσό, το δείχνουμε ολόκληρο
             return String.format("%,d €", amount);
         }
     }

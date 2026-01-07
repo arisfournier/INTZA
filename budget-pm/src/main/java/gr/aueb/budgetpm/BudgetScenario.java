@@ -11,8 +11,6 @@ public class BudgetScenario {
 
     private final String name;
     private final Budget baseBudget;
-
-    // Overrides ανά κατηγορία (π.χ. HOSPITALS -> 1234567)
     private final Map<String, Long> categoryOverrides = new HashMap<>();
 
     public BudgetScenario(String name, Budget baseBudget) {
@@ -23,7 +21,7 @@ public class BudgetScenario {
     public BudgetScenario(String name, Budget baseBudget, double percentChange) {
         this(name, baseBudget);
 
-        // Εφαρμόζουμε ποσοστιαία μεταβολή σε όλες τις κατηγορίες baseline
+        //Εφαρμόζουμε ποσοστιαία μεταβολή σε όλες τις κατηγορίες baseline
         for (BudgetCategory c : baseBudget.getCategories()) {
             String catName = c.getName().toUpperCase();
             long base = c.getAmount();
@@ -38,9 +36,6 @@ public class BudgetScenario {
         return name;
     }
 
-    /**
-     * Θέτει override ποσό για μια κατηγορία (π.χ. HOSPITALS).
-     */
     public void setCategoryValue(String categoryName, long value) {
         categoryOverrides.put(categoryName.toUpperCase(), value);
     }
@@ -58,9 +53,7 @@ public class BudgetScenario {
         return getBaselineCategoryValue(key);
     }
 
-    /**
-     * Επιστρέφει baseline (τελική) τιμή μιας κατηγορίας από το base budget.
-     */
+    //Επιστρέφει baseline (τελική) τιμή μιας κατηγορίας από το base budget.
     private long getBaselineCategoryValue(String categoryName) {
         long sum = 0;
         for (BudgetCategory c : baseBudget.getCategories()) {
@@ -71,9 +64,7 @@ public class BudgetScenario {
         return sum;
     }
 
-    /**
-     * Επιστρέφει ΟΛΕΣ τις κατηγορίες και τις τιμές τους στο scenario.
-     */
+    //Επιστρέφει ΟΛΕΣ τις κατηγορίες και τις τιμές τους στο scenario
     public Map<String, Long> getAllCategoryValues() {
         Map<String, Long> result = new HashMap<>();
 
@@ -82,7 +73,7 @@ public class BudgetScenario {
             result.put(name, getCategoryValue(name));
         }
 
-        // Αν υπάρχουν overrides για κατηγορίες που δεν υπήρχαν στο base, τις προσθέτουμε
+        //Αν υπάρχουν overrides για κατηγορίες που δεν υπήρχαν στο base, τις προσθέτουμε
         for (var e : categoryOverrides.entrySet()) {
             result.putIfAbsent(e.getKey(), e.getValue());
         }

@@ -8,14 +8,6 @@ import java.nio.charset.StandardCharsets;
 
 /**
  * Αποθήκευση και ανάκτηση Budget αντικειμένων σε/από JSON αρχεία.
- *
- * Απλό format, π.χ.:
- * {
- *   "countryCode": "GR",
- *   "year": 2020,
- *   "totalRevenue": 12345,
- *   "totalExpenses": 67890
- * }
  */
 public class BudgetStorage {
 
@@ -29,13 +21,10 @@ public class BudgetStorage {
         obj.put("totalRevenue", budget.getTotalRevenue());
         obj.put("totalExpenses", budget.getTotalExpenses());
 
-        String json = obj.toString(2); // pretty-print
+        String json = obj.toString(2);
         Files.writeString(file, json, StandardCharsets.UTF_8);
     }
 
-    /**
-     * Διαβάζει ένα Budget από JSON αρχείο.
-     */
     public static Budget loadBudget(Path file) throws Exception {
         String json = Files.readString(file, StandardCharsets.UTF_8);
         JSONObject obj = new JSONObject(json);
