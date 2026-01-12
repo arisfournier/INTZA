@@ -15,64 +15,7 @@ CLI εφαρμογή σε Java για επισκόπηση/επεξεργασί�
 mvn clean test
 mvn package
 
-Εκτέλεση με την εντολή: mvn exec:java
-[D[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C μέσω του maven
-
-Οδηγίες χρήσης (CLI):
-set year 2020
-show summary
-show categories
-
-set value HOSPITALS 300
-increase all 5
-reduce STAFF 10
-
-scenario demo 10
-scenario show demo
-compare scenario demo
-
-compare years 2019 2020
-
-export csv 2020
-save all
-exit
-[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C
-[D[A[A[B[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[D[D[ - Ενδεικτική ροή χρήσης :[B[B[B[B[B[B[B[B[B[B[B[B[B[B[B[B[B[B[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D
-Βασικές εντολές:
-Βασικές εντολές
-
-help : εμφάνιση διαθέσιμων εντολών
-
-set year <YEAR> : επιλογή έτους
-
-list years : εμφανίζει ποια έτη είναι φορτωμένα
-
-show summary : σύνοψη προϋπολογισμού έτους
-
-show categories : λίστα κατηγοριών & τιμών
-
-set value <CAT> <VALUE> : ορισμός τιμής κατηγορίας
-
-increase all <X> / reduce all <X> : οριζόντια μεταβολή (%) σε όλες τις κατηγορίες
-
-increase <CAT> <X> / reduce <CAT> <X> : μεταβολή (%) σε συγκεκριμένη κατηγορία
-
-show changes : εμφανίζει τις αλλαγές χρήστη σε σχέση με αρχικές τιμές
-
-scenario <NAME> <X> : δημιουργία σεναρίου μεταβολής X% (όλες οι κατηγορίες)
-
-scenario show <NAME> : προβολή τιμών σεναρίου
-
-compare scenario <NAME> : σύγκριση σεναρίου με baseline έτους
-
-compare years <Y1> <Y2> : σύγκριση δύο ετών
-
-export csv <YEAR> : εξαγωγή κατηγοριών σε CSV
-
-save all / load year <YEAR> : αποθήκευση/ανάκτηση
-
-exit : έξοδος[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[A[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[D[A[A[A[A[A[B[B[B[B[B[B[B[B[B[B[B[B[B[B[B[B[B[B[B[B[B[B[B[B[B[B[B[B[B[C[C[C[C[C[C[C[C[C[C[C[C[C
-
+Εκτέλεση του γραφικού περιβάλλοντος με την εντολή: mvn exec:java
 
 Δομή αποθετηρίοϋ:
 
@@ -86,11 +29,14 @@ budget-pm/
 │  │        ├─ App.java
 │  │        ├─ Budget.java
 │  │        ├─ BudgetCategory.java
+│  │        ├─ BudgetComperator.java
 │  │        ├─ BudgetApiReader.java
 │  │        ├─ BudgetYearManager.java
 │  │        ├─ BudgetScenario.java
 │  │        ├─ BudgetComparator.java
 │  │        ├─ CSVExporter.java
+│  │        ├─ GuiApp.java
+│  │        ├─ GuiCharts.java
 │  │        └─ CountryComparator.java
 │  └─ test/
 │     └─ java/

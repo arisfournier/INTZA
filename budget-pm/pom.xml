@@ -55,18 +55,15 @@
         <artifactId>exec-maven-plugin</artifactId>
         <version>3.2.0</version>
         <configuration>
-          <mainClass>gr.aueb.budgetpm.App</mainClass>
-        </configuration>
+          <mainClass>gr.aueb.budgetpm.GuiApp</mainClass> </configuration>
       </plugin>
 
-      <!-- Εκτέλεση: mvn exec:java -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
         <version>3.2.0</version>
         <configuration>
-          <mainClass>gr.aueb.budgetpm.App</mainClass>
-        </configuration>
+          <mainClass>gr.aueb.budgetpm.GuiApp</mainClass> </configuration>
       </plugin>
 
       <!-- JUnit 5 support -->
